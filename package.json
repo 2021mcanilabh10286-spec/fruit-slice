@@ -9,7 +9,7 @@
     "start": "webpack serve --mode development --open",
     "build": "webpack --mode production",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist",
+    "deploy": "node scripts/deploy-gh-pages.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [],
