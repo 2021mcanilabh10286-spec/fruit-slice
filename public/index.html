@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fruit Cutter - Ninja Blade Slice Game</title>
+  <!-- Google Fonts: Permanent Marker & Bangers & Poppins for genuine arcade Dojo feel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Permanent+Marker&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- In-Game HUD -->
+    <div id="hud" class="hud hidden">
+      <!-- Top Left: Score & High Score -->
+      <div class="hud-score-container">
+        <div class="score-box">
+          <span class="hud-icon">🍉</span>
+          <div class="score-details">
+            <span class="hud-label">SCORE</span>
+            <span id="score-val" class="hud-value">0</span>
+          </div>
+        </div>
+        <div class="best-box">
+          <span class="hud-label">BEST:</span>
+          <span id="best-score-val" class="hud-value-small">0</span>
+        </div>
+      </div>
+
+      <!-- Top Center: Timer or Combo & Mode Info -->
+      <div class="hud-center-container">
+        <div id="timer-display" class="timer-display hidden">
+          <span class="timer-icon">⏳</span>
+          <span id="timer-val">60</span>s
+          <div class="timer-progress-bar">
+            <div id="timer-progress-fill" class="timer-progress-fill"></div>
+          </div>
+        </div>
+        <div id="frenzy-banner" class="frenzy-banner hidden">
+          ⚡ FRUIT FRENZY! 2x POINTS ⚡
+        </div>
+      </div>
+
+      <!-- Top Right: Strikes (Classic) and Control Buttons -->
+      <div class="hud-right-container">
+        <div id="strikes-container" class="strikes-container">
+          <span class="strike-slot" data-index="0">❌</span>
+          <span class="strike-slot" data-index="1">❌</span>
+          <span class="strike-slot" data-index="2">❌</span>
+        </div>
+        <div class="hud-buttons">
+          <button id="btn-sound" class="hud-btn" title="Toggle Sound (M)" aria-label="Toggle Sound">
+            <span id="sound-icon">🔊</span>
+          </button>
+          <button id="btn-pause" class="hud-btn" title="Pause Game (ESC / P)" aria-label="Pause Game">
+            <span>⏸️</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active In-Game Combo Announcement Overlay -->
+    <div id="combo-overlay" class="combo-overlay pointer-events-none"></div>
+
+    <!-- Start / Main Menu Screen -->
+    <div id="menu-screen" class="screen-overlay active">
+      <div class="menu-content">
+        <div class="logo-wrapper">
+          <div class="logo-badge">武士道</div>
+          <h1 class="game-logo">
+            <span class="logo-fruit">FRUIT</span>
+            <span class="logo-slash">/</span>
+            <span class="logo-cutter">CUTTER</span>
+          </h1>
+          <p class="tagline">Master the Blade • Slice the Freshness • Avoid the Bombs</p>
+        </div>
+
+        <!-- Mode Select Cards -->
+        <div class="mode-selection">
+          <div class="mode-card selected" data-mode="classic">
+            <div class="mode-badge">POPULAR</div>
+            <div class="mode-icon">⚔️</div>
+            <h3>CLASSIC</h3>
+            <p>3 Strikes. Bombs are fatal. True Ninja test.</p>
+          </div>
+          <div class="mode-card" data-mode="arcade">
+            <div class="mode-badge">FAST</div>
+            <div class="mode-icon">⏱️</div>
+            <h3>ARCADE</h3>
+            <p>60s timer. Frenzy fruits, bombs cost 10 pts.</p>
+          </div>
+          <div class="mode-card" data-mode="zen">
+            <div class="mode-badge">CHILL</div>
+            <div class="mode-icon">🧘</div>
+            <h3>ZEN</h3>
+            <p>90s tranquil slice. No bombs, zero strikes.</p>
+          </div>
+        </div>
+
+        <!-- Action Row -->
+        <div class="menu-actions">
+          <button id="btn-start-game" class="btn-primary">
+            <span class="btn-glint"></span>
+            <span class="btn-text">⚔️ SLICE TO PLAY</span>
+          </button>
+          <button id="btn-blade-dojo" class="btn-secondary">
+            <span>🗡️ Blade Dojo</span>
+          </button>
+        </div>
+
+        <!-- Controls Guide -->
+        <div class="controls-guide">
+          <span>🖱️ Click & Drag or 👆 Swipe Screen to Slice</span>
+          <span class="dot">•</span>
+          <span>⚡ Slice multiple fruits at once for Combos!</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Screen Modal -->
+    <div id="pause-screen" class="screen-overlay hidden">
+      <div class="modal-box">
+        <h2 class="modal-title">GAME PAUSED</h2>
+        <div class="modal-actions">
+          <button id="btn-resume" class="btn-primary">▶️ RESUME</button>
+          <button id="btn-restart" class="btn-secondary">🔄 RESTART</button>
+          <button id="btn-quit-menu" class="btn-ghost">🏠 MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Screen Modal -->
+    <div id="gameover-screen" class="screen-overlay hidden">
+      <div class="modal-box gameover-box">
+        <div id="gameover-ribbon" class="ribbon-banner">GAME OVER</div>
+        
+        <div class="results-container">
+          <div class="final-score-box">
+            <span class="result-label">FINAL SCORE</span>
+            <span id="go-score" class="result-value">0</span>
+            <span id="go-new-best" class="new-best-badge hidden">🏆 NEW BEST!</span>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Best Score</span>
+              <span id="go-best-score" class="stat-val">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Fruits Sliced</span>
+              <span id="go-total-slices" class="stat-val">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Max Combo</span>
+              <span id="go-max-combo" class="stat-val">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Game Mode</span>
+              <span id="go-mode-name" class="stat-val">Classic</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btn-play-again" class="btn-primary">
+            <span class="btn-glint"></span>
+            <span>🔄 PLAY AGAIN</span>
+          </button>
+          <button id="btn-go-menu" class="btn-secondary">
+            <span>🏠 MAIN MENU</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blade Dojo Customization Modal -->
+    <div id="dojo-modal" class="screen-overlay hidden">
+      <div class="modal-box dojo-box">
+        <div class="modal-header">
+          <h2>🗡️ BLADE DOJO</h2>
+          <button id="btn-close-dojo" class="btn-close">✕</button>
+        </div>
+        <p class="dojo-subtitle">Choose your sword's elemental aura & strike trail</p>
+
+        <div class="blades-grid" id="blades-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <button id="btn-equip-blade" class="btn-primary full-width">EQUIP BLADE</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
