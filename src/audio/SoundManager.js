@@ -8,6 +8,8 @@ export class SoundManager {
     this.isMuted = false;
     this.initialized = false;
     this.sizzleNode = null;
+    this.lastSwooshAt = 0;
+    this.lastSliceAt = 0;
   }
 
   init() {
@@ -47,6 +49,10 @@ export class SoundManager {
     if (this.isMuted || !this.ctx) return;
     this.ensureContext();
 
+    const now = performance.now();
+    if (now - this.lastSwooshAt < 70) return;
+    this.lastSwooshAt = now;
+
     const t = this.ctx.currentTime;
     const bufferSize = this.ctx.sampleRate * 0.15; // 150ms
     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -85,6 +91,10 @@ export class SoundManager {
   playSlice(fruitType = 'watermelon') {
     if (this.isMuted || !this.ctx) return;
     this.ensureContext();
+
+    const now = performance.now();
+    if (now - this.lastSliceAt < 45) return;
+    this.lastSliceAt = now;
 
     const t = this.ctx.currentTime;
     

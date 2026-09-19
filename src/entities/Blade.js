@@ -54,7 +54,9 @@ export class Blade {
   constructor(canvas) {
     this.canvas = canvas;
     this.points = []; // {x, y, time}
-    this.maxTrailAge = 180; // ms
+    this.maxTrailAge = 140; // ms
+    this.maxTrailPoints = 18;
+    this.minPointDistance = 3;
     this.isMouseDown = false;
     this.currentSkin = BLADE_SKINS.classic;
     this.sparks = [];
@@ -139,6 +141,11 @@ export class Blade {
       const dx = x - this.lastPos.x;
       const dy = y - this.lastPos.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Pointer events can arrive far faster than the display refresh rate.
+      // Keeping only meaningfully different points bounds both trail drawing
+      // and segment collision checks without affecting slice accuracy.
+      if (dist < this.minPointDistance) return;
       
       // Emit sparks along the blade
       if (dist > 15) {
@@ -153,6 +160,7 @@ export class Blade {
   addPoint(x, y) {
     const now = performance.now();
     this.points.push({ x, y, time: now });
+    if (this.points.length > this.maxTrailPoints) this.points.shift();
   }
 
   emitSparks(x, y, dx, dy) {
@@ -177,7 +185,9 @@ export class Blade {
   update(dt) {
     const now = performance.now();
     // Prune expired trail points
-    this.points = this.points.filter((p) => now - p.time < this.maxTrailAge);
+    while (this.points.length && now - this.points[0].time >= this.maxTrailAge) {
+      this.points.shift();
+    }
 
     // Update blade sparks
     for (let i = this.sparks.length - 1; i >= 0; i--) {
@@ -214,7 +224,8 @@ export class Blade {
     ctx.lineJoin = 'round';
 
     // Draw outer glowing aura
-    for (let i = 1; i < this.points.length; i++) {
+    const firstSegment = Math.max(1, this.points.length - 8);
+    for (let i = firstSegment; i < this.points.length; i++) {
       const p0 = this.points[i - 1];
       const p1 = this.points[i];
       const ageRatio = (now - p1.time) / this.maxTrailAge;
@@ -234,7 +245,7 @@ export class Blade {
     }
 
     // Draw middle trail
-    for (let i = 1; i < this.points.length; i++) {
+    for (let i = firstSegment; i < this.points.length; i++) {
       const p0 = this.points[i - 1];
       const p1 = this.points[i];
       const ageRatio = (now - p1.time) / this.maxTrailAge;
@@ -252,7 +263,7 @@ export class Blade {
     }
 
     // Draw sharp glowing blade core
-    for (let i = 1; i < this.points.length; i++) {
+    for (let i = firstSegment; i < this.points.length; i++) {
       const p0 = this.points[i - 1];
       const p1 = this.points[i];
       const ageRatio = (now - p1.time) / this.maxTrailAge;
@@ -281,7 +292,8 @@ export class Blade {
     const now = performance.now();
 
     // Check points that were added in the last ~70ms
-    for (let i = 1; i < this.points.length; i++) {
+    const firstSegment = Math.max(1, this.points.length - 8);
+    for (let i = firstSegment; i < this.points.length; i++) {
       const p0 = this.points[i - 1];
       const p1 = this.points[i];
       if (now - p1.time < 90) {

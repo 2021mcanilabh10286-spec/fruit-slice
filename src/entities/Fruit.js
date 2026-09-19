@@ -133,7 +133,7 @@ export class Fruit {
     }
   }
 
-  slice(sliceAngle, particlesArray, decalsArray) {
+  slice(sliceAngle, particlesArray, decalsArray, particleCountLimit = 20) {
     this.isSliced = true;
 
     // Calculate normal vector perpendicular to slice
@@ -169,7 +169,9 @@ export class Fruit {
     );
 
     // Spawn juicy splatter particles
-    const particleCount = this.isSpecial ? 35 : 20;
+    const particleCount = this.isSpecial
+      ? Math.min(35, particleCountLimit + 8)
+      : particleCountLimit;
     for (let i = 0; i < particleCount; i++) {
       particlesArray.push(new JuiceParticle(this.x, this.y, this.juiceColor, sliceAngle));
     }

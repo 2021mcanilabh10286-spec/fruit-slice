@@ -28,7 +28,18 @@ export class Game {
     // Display sizing
     this.width = window.innerWidth;
     this.height = window.innerHeight;
-    this.dpr = window.devicePixelRatio || 1;
+    // Rendering a full-screen canvas at DPR 3+ makes every frame nine times
+    // more expensive than a DPR 1 display. A cap keeps the game responsive on
+    // high-density phones while remaining sharp on desktop displays.
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.isReducedEffects = (navigator.hardwareConcurrency || 4) <= 4
+      || (navigator.deviceMemory && navigator.deviceMemory <= 4);
+    this.effectLimits = {
+      particles: this.isReducedEffects ? 90 : 160,
+      decals: this.isReducedEffects ? 12 : 24,
+      halves: this.isReducedEffects ? 12 : 24,
+      floatingTexts: 12,
+    };
     this.setupCanvas();
 
     // Entities
@@ -241,7 +252,12 @@ export class Game {
         if (check.hit) {
           slicedInThisFrame++;
           this.totalSlices++;
-          const halves = fruit.slice(check.angle, this.particles, this.decals);
+          const halves = fruit.slice(
+            check.angle,
+            this.particles,
+            this.decals,
+            this.isReducedEffects ? 12 : 20
+          );
           this.fruitHalves.push(...halves);
           this.fruits.splice(i, 1);
 
@@ -310,6 +326,17 @@ export class Game {
     if (slicedInThisFrame > 0) {
       this.sound.playSwoosh();
     }
+  }
+
+  trimEffects() {
+    const trim = (items, limit) => {
+      if (items.length > limit) items.splice(0, items.length - limit);
+    };
+
+    trim(this.particles, this.effectLimits.particles);
+    trim(this.decals, this.effectLimits.decals);
+    trim(this.fruitHalves, this.effectLimits.halves);
+    trim(this.floatingTexts, this.effectLimits.floatingTexts);
   }
 
   updateCombos(dt) {
@@ -447,6 +474,9 @@ export class Game {
         this.shakeIntensity = 0;
       }
     }
+
+    // Keep visual effects bounded during rapid multi-fruit slices.
+    this.trimEffects();
   }
 
   render() {
