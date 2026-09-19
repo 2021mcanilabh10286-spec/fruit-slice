@@ -63,6 +63,12 @@ export class Blade {
     this.minSliceSpeed = 120; // px per sec
     this.lastPos = null;
     this.isSwiping = false;
+    this.cursorPos = null;
+    this.trackpadPos = null;
+    this.trackpadResetTimer = null;
+    // A two-finger touchpad gesture is delivered by browsers as a wheel event.
+    // Coarse-pointer devices (phones/tablets) keep their existing touch input.
+    this.supportsTrackpadBlade = window.matchMedia('(pointer: fine)').matches;
 
     this.setupListeners();
   }
@@ -93,10 +99,24 @@ export class Blade {
 
     window.addEventListener('mousemove', (e) => {
       const pos = this.getCanvasCoords(e);
+      this.cursorPos = pos;
       if (this.isMouseDown) {
         this.handleMove(pos.x, pos.y);
       }
     });
+
+    this.canvas.addEventListener('wheel', (e) => {
+      if (!this.supportsTrackpadBlade || e.ctrlKey) return;
+
+      const distance = Math.hypot(e.deltaX, e.deltaY);
+      if (distance < 2) return;
+
+      // Keep the game canvas from scrolling while a two-finger swipe is used
+      // as the blade. This listener is canvas-only, so modal content can still
+      // be scrolled normally.
+      e.preventDefault();
+      this.handleTrackpadSwipe(e.deltaX, e.deltaY);
+    }, { passive: false });
 
     // Touch events for mobile/tablets
     window.addEventListener('touchstart', (e) => {
@@ -161,6 +181,34 @@ export class Blade {
     const now = performance.now();
     this.points.push({ x, y, time: now });
     if (this.points.length > this.maxTrailPoints) this.points.shift();
+  }
+
+  handleTrackpadSwipe(deltaX, deltaY) {
+    const start = this.trackpadPos || this.cursorPos || {
+      x: this.canvas.clientWidth / 2,
+      y: this.canvas.clientHeight / 2,
+    };
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const end = {
+      x: clamp(start.x + deltaX, 0, this.canvas.clientWidth),
+      y: clamp(start.y + deltaY, 0, this.canvas.clientHeight),
+    };
+
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    if (Math.hypot(dx, dy) < this.minPointDistance) return;
+
+    this.addPoint(start.x, start.y);
+    this.addPoint(end.x, end.y);
+    this.emitSparks(end.x, end.y, dx, dy);
+    this.trackpadPos = end;
+    this.isSwiping = true;
+
+    clearTimeout(this.trackpadResetTimer);
+    this.trackpadResetTimer = setTimeout(() => {
+      this.trackpadPos = null;
+      this.isSwiping = false;
+    }, 100);
   }
 
   emitSparks(x, y, dx, dy) {
