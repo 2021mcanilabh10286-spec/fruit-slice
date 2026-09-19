@@ -115,7 +115,7 @@ export class Blade {
       // as the blade. This listener is canvas-only, so modal content can still
       // be scrolled normally.
       e.preventDefault();
-      this.handleTrackpadSwipe(e.deltaX, e.deltaY);
+      this.handleTrackpadSwipe(e.deltaX, e.deltaY, e.deltaMode);
     }, { passive: false });
 
     // Touch events for mobile/tablets
@@ -183,15 +183,18 @@ export class Blade {
     if (this.points.length > this.maxTrailPoints) this.points.shift();
   }
 
-  handleTrackpadSwipe(deltaX, deltaY) {
+  handleTrackpadSwipe(deltaX, deltaY, deltaMode = 0) {
     const start = this.trackpadPos || this.cursorPos || {
       x: this.canvas.clientWidth / 2,
       y: this.canvas.clientHeight / 2,
     };
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const deltaScale = deltaMode === 1 ? 16 : deltaMode === 2 ? this.canvas.clientHeight : 1;
     const end = {
-      x: clamp(start.x + deltaX, 0, this.canvas.clientWidth),
-      y: clamp(start.y + deltaY, 0, this.canvas.clientHeight),
+      // Wheel deltas describe document scrolling, which is the inverse of
+      // the fingers' physical direction on a touchpad.
+      x: clamp(start.x - deltaX * deltaScale, 0, this.canvas.clientWidth),
+      y: clamp(start.y - deltaY * deltaScale, 0, this.canvas.clientHeight),
     };
 
     const dx = end.x - start.x;
@@ -202,6 +205,7 @@ export class Blade {
     this.addPoint(end.x, end.y);
     this.emitSparks(end.x, end.y, dx, dy);
     this.trackpadPos = end;
+    this.cursorPos = end;
     this.isSwiping = true;
 
     clearTimeout(this.trackpadResetTimer);
